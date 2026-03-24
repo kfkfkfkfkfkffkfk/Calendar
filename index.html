@@ -2,287 +2,497 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Neon Night Calendar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Powered Pro Calendar</title>
     <style>
         :root {
             --bg: #0f172a;
             --card: #1e293b;
-            --accent: #38bdf8;
+            --accent: #38bdf8; 
+            --event-color: #a855f7; 
+            --school-color: #f59e0b; 
             --text: #f1f5f9;
             --task-bg: #334155;
             --border: #475569;
         }
 
         body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
+            font-family: 'Inter', system-ui, sans-serif; background-color: var(--bg); color: var(--text);
+            margin: 0; padding: 15px; height: 100vh; box-sizing: border-box;
+            display: flex; justify-content: center; overflow: hidden;
         }
 
-        /* Layout & Header */
-        .container { width: 95%; max-width: 1200px; padding: 20px; }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        
-        .glass {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px;
+        .dashboard { display: flex; gap: 20px; width: 100%; max-width: 1600px; height: 100%; }
+
+        /* LEFT SIDEBAR */
+        .sidebar { width: 340px; display: flex; flex-direction: column; gap: 15px; height: 100%; }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border);
+            border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 10px;
         }
 
-        /* Input Styling */
-        .input-grid { 
-            display: grid; 
-            grid-template-columns: 2fr 1fr 1fr 1fr auto; 
-            gap: 15px; 
-            margin-bottom: 30px; 
-            align-items: end;
+        label { display: block; font-size: 0.75rem; color: var(--accent); font-weight: bold; margin-bottom: 2px; }
+        input, select, textarea {
+            background: var(--bg); border: 1px solid var(--border); color: white;
+            padding: 8px 10px; border-radius: 6px; width: 100%; box-sizing: border-box; outline: none;
+            color-scheme: dark; font-family: inherit;
         }
-        
-        label { display: block; font-size: 0.8rem; margin-bottom: 5px; color: var(--accent); }
-        input, select {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            width: 100%;
-            outline: none;
-        }
+        textarea { resize: none; }
 
         .btn-add {
-            background: var(--accent);
-            color: var(--bg);
-            font-weight: bold;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.2s;
+            background: var(--accent); color: var(--bg); font-weight: bold; border: none;
+            padding: 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-top: 5px;
         }
-        .btn-add:hover { transform: translateY(-2px); box-shadow: 0 0 15px var(--accent); }
+        .btn-add:hover { box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
 
-        /* Calendar Grid */
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 10px;
-            margin-bottom: 40px;
+        .list-container { flex-grow: 1; overflow-y: auto; padding-right: 5px; }
+
+        /* RIGHT MAIN CONTENT */
+        .main-content {
+            flex-grow: 1; background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px; display: flex; flex-direction: column; height: 100%; box-sizing: border-box;
         }
 
+        .nav-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .date-controls { display: flex; align-items: center; gap: 10px; }
+        .date-controls button { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+        .date-controls button:hover { border-color: var(--accent); }
+        .date-controls h2 { margin: 0; color: var(--accent); min-width: 220px; text-align: center; }
+
+        .view-tabs { display: flex; gap: 5px; }
+        .view-tabs button {
+            background: var(--bg); border: 1px solid var(--border); color: var(--text);
+            padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;
+        }
+        .view-tabs button.active { background: var(--accent); color: var(--bg); font-weight: bold; border-color: var(--accent); }
+
+        #calendarArea { flex-grow: 1; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+
+        /* GRIDS */
+        .grid-header-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 8px; }
+        .grid-body { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr; gap: 8px; flex-grow: 1; min-height: 400px; }
+        
         .day-cell {
-            background: var(--card);
-            border: 1px solid var(--border);
-            min-height: 120px;
-            border-radius: 8px;
-            padding: 10px;
-            position: relative;
+            background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+            padding: 8px; overflow-y: auto; cursor: pointer; transition: 0.1s;
         }
+        .day-cell:hover { border-color: var(--accent); }
+        .day-cell.header { text-align: center; font-weight: bold; background: var(--task-bg); border: none; padding: 5px; cursor: default; }
+        .day-cell.inactive { opacity: 0.2; cursor: default; }
+        .day-cell.today { border: 2px solid var(--accent); background: rgba(56, 189, 248, 0.05); }
+        .day-num { font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; opacity: 0.7; pointer-events: none; }
 
-        .day-num { font-weight: bold; margin-bottom: 8px; font-size: 0.9rem; opacity: 0.5; }
-        .today { border: 2px solid var(--accent); box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.2); }
+        /* YEAR VIEW */
+        .grid-year-full { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+        .year-month-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; }
+        .year-month-title { text-align: center; color: var(--text); font-weight: bold; margin-bottom: 12px; font-size: 0.95rem; }
+        .year-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+        .year-day-header { font-size: 0.65rem; color: #94a3b8; margin-bottom: 6px; font-weight: bold; }
+        .year-day-circle {
+            width: 24px; height: 24px; margin: 0 auto; display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; border-radius: 50%; cursor: pointer; transition: 0.2s; color: var(--text);
+        }
+        .year-day-circle:hover { background: var(--task-bg); }
+        .year-day-circle.current-day { background: var(--accent); color: var(--bg); font-weight: bold; }
+        .year-day-circle.has-task { border: 1px solid var(--school-color); }
+        .year-day-circle.has-task:hover { background: var(--school-color); color: var(--bg); }
 
-        /* Task Tags inside Calendar */
+        /* TAGS & CHECKBOXES */
         .task-tag {
-            background: var(--accent);
-            color: var(--bg);
-            font-size: 0.7rem;
-            padding: 2px 6px;
-            border-radius: 4px;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-weight: bold;
+            background: var(--accent); color: var(--bg); font-size: 0.7rem;
+            padding: 5px; border-radius: 4px; margin-bottom: 4px;
+            overflow: hidden; font-weight: bold; line-height: 1.3;
+            display: flex; flex-direction: column;
         }
+        .task-tag.event-type { background: var(--event-color); color: white; }
+        .task-tag.school-type { background: var(--school-color); color: var(--bg); }
+        .task-tag.completed { opacity: 0.5; text-decoration: line-through; }
+        
+        .task-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .complete-cb { cursor: pointer; width: 14px; height: 14px; margin: 0 0 0 5px; accent-color: #10b981; }
 
-        /* List View Switches */
-        .task-list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--task-bg);
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-        }
+        .task-link { color: inherit; text-decoration: underline; pointer-events: auto; background: rgba(0,0,0,0.1); padding: 1px 4px; border-radius: 3px; display: inline-block; margin-top: 3px; }
+        .task-link:hover { background: rgba(0,0,0,0.2); }
 
-        .switch { position: relative; width: 45px; height: 24px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #475569; transition: .4s; border-radius: 34px;
+        /* --- AI ASSISTANT UI --- */
+        .ai-fab {
+            position: fixed; bottom: 30px; right: 30px;
+            width: 65px; height: 65px; border-radius: 50%;
+            background: linear-gradient(135deg, #38bdf8, #a855f7);
+            box-shadow: 0 0 25px rgba(168, 85, 247, 0.6);
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; z-index: 1000; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .slider:before {
-            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
-            background-color: white; transition: .4s; border-radius: 50%;
+        .ai-fab:hover { transform: scale(1.1) rotate(5deg); box-shadow: 0 0 35px rgba(56, 189, 248, 0.8); }
+        .ai-icon { width: 30px; height: 30px; fill: white; }
+        
+        .ai-modal {
+            position: fixed; bottom: 110px; right: 30px;
+            width: 320px; background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--accent); border-radius: 16px;
+            padding: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            backdrop-filter: blur(15px); display: none; z-index: 1000;
+            flex-direction: column; gap: 12px;
+            transform: translateY(20px); opacity: 0; transition: 0.3s;
         }
-        input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(21px); }
+        .ai-modal.active { display: flex; transform: translateY(0); opacity: 1; }
+        .ai-input { width: 100%; padding: 12px; box-sizing: border-box; font-size: 0.9rem; }
+        .ai-response { font-size: 0.85rem; color: #94a3b8; min-height: 20px; line-height: 1.4; }
 
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <header>
-        <h1>MARCH 2026</h1>
-        <div style="font-size: 0.9rem; color: var(--accent);">System: Online & Armed</div>
-    </header>
+<div class="dashboard">
+    <div class="sidebar">
+        <div class="glass-panel">
+            <h3 style="margin:0; color:white; font-size:1.1rem;">New Entry</h3>
+            <div>
+                <label>TITLE</label>
+                <input type="text" id="taskName" placeholder="e.g. Bio Essay">
+            </div>
+            <div>
+                <label>DATE (Click calendar to auto-fill)</label>
+                <input type="date" id="taskDate">
+            </div>
+            <div>
+                <label>TIME</label>
+                <input type="time" id="taskTime" step="300"> 
+            </div>
+            <div>
+                <label>TYPE</label>
+                <select id="taskType">
+                    <option value="School">School Assignment 🎒</option>
+                    <option value="Task">Task ✔</option> <option value="Event">Event 📅</option>
+                </select>
+            </div>
+            <div>
+                <label>DESCRIPTION & LINKS</label>
+                <textarea id="taskDesc" rows="2" placeholder="Notes or paste a link..."></textarea>
+            </div>
+            <button class="btn-add" onclick="addTask()">ADD TO SCHEDULE</button>
+        </div>
 
-    <div class="glass input-grid">
-        <div>
-            <label>TASK NAME</label>
-            <input type="text" id="taskName" placeholder="e.g. Gym Session">
+        <div class="glass-panel list-container">
+            <h3 style="margin:0 0 10px 0; color:white; font-size:1rem; position:sticky; top:0; background:rgba(30,41,59,0.9); z-index:10; padding-bottom:5px;">Upcoming Setup</h3>
+            <div id="masterList"></div>
         </div>
-        <div>
-            <label>DATE</label>
-            <input type="date" id="taskDate">
-        </div>
-        <div>
-            <label>TIME (5m Incr.)</label>
-            <input type="time" id="taskTime" step="300"> 
-        </div>
-        <div>
-            <label>CATEGORY</label>
-            <select id="taskType">
-                <option value="Event">Event 📅</option>
-                <option value="Task">Task ✅</option>
-            </select>
-        </div>
-        <button class="btn-add" onclick="addTask()">ADD</button>
     </div>
 
-    <div class="calendar-grid" id="calendarGrid">
+    <div class="main-content">
+        <div class="nav-header">
+            <div class="date-controls">
+                <button onclick="navigate(-1)">&#8592;</button>
+                <h2 id="displayDate">Loading...</h2>
+                <button onclick="navigate(1)">&#8594;</button>
+                <button onclick="goToday()">Today</button>
+            </div>
+            <div class="view-tabs">
+                <button id="btn-day" onclick="setView('day')">Day</button>
+                <button id="btn-week" onclick="setView('week')">Week</button>
+                <button id="btn-month" onclick="setView('month')" class="active">Month</button>
+                <button id="btn-year" onclick="setView('year')">Year</button>
+            </div>
         </div>
 
-    <div id="masterList">
-        <h3>Notification Management</h3>
-        </div>
+        <div id="calendarArea"></div>
+    </div>
+</div>
+
+<div class="ai-fab" onclick="toggleAI()" title="Open AI Scheduler">
+    <svg class="ai-icon" viewBox="0 0 24 24">
+        <path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z" />
+    </svg>
+</div>
+
+<div class="ai-modal" id="aiModal">
+    <h3 style="margin:0; color:var(--accent); display:flex; align-items:center; gap:8px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/></svg>
+        Neon AI Core
+    </h3>
+    <p style="font-size:0.8rem; margin:0; color:#94a3b8;">Type naturally. Try: <i>"Schedule a bio exam for next Friday at 10am"</i></p>
+    <input type="text" id="aiPrompt" class="ai-input" placeholder="What do you need to schedule?" onkeypress="handleAIKey(event)">
+    <button class="btn-add" onclick="processAIPrompt()" style="width:100%;">Generate Schedule</button>
+    <div id="aiResponse" class="ai-response"></div>
 </div>
 
 <script>
-    let tasks = JSON.parse(localStorage.getItem('neon_tasks')) || [];
+    let tasks = JSON.parse(localStorage.getItem('neon_dash_v4')) || [];
+    let currentView = 'month';
+    let baseDate = new Date();
 
-    // Set default date to today for convenience
     document.getElementById('taskDate').valueAsDate = new Date();
+    if (Notification.permission !== 'granted') Notification.requestPermission();
+
+    // --- AI LOGIC ENGINE ---
+    function toggleAI() {
+        const modal = document.getElementById('aiModal');
+        if (modal.style.display === 'flex') {
+            modal.style.display = 'none';
+            modal.classList.remove('active');
+        } else {
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('active'), 10);
+            document.getElementById('aiPrompt').focus();
+        }
+    }
+
+    function handleAIKey(e) { if(e.key === 'Enter') processAIPrompt(); }
+
+    function processAIPrompt() {
+        const input = document.getElementById('aiPrompt').value.toLowerCase();
+        const responseDiv = document.getElementById('aiResponse');
+        if(!input) return;
+
+        // 1. Determine Type
+        let type = 'Task';
+        if(input.match(/school|homework|essay|class|assignment|exam|study/)) type = 'School';
+        else if(input.match(/event|party|meeting|dinner|hangout/)) type = 'Event';
+
+        // 2. Determine Date
+        let dateObj = new Date();
+        let dateSet = false;
+        
+        if (input.includes('tomorrow')) {
+            dateObj.setDate(dateObj.getDate() + 1); dateSet = true;
+        } else if (input.includes('today')) {
+            dateSet = true;
+        } else {
+            const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            for (let i = 0; i < days.length; i++) {
+                if (input.includes(days[i])) {
+                    const todayDay = dateObj.getDay();
+                    let diff = i - todayDay;
+                    if (diff <= 0 || input.includes('next ' + days[i])) diff += 7;
+                    dateObj.setDate(dateObj.getDate() + diff);
+                    dateSet = true; break;
+                }
+            }
+        }
+
+        // 3. Determine Time
+        let timeStr = "12:00";
+        const timeMatch = input.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/);
+        if(timeMatch) {
+            let hours = parseInt(timeMatch[1]);
+            const mins = timeMatch[2] || "00";
+            if(timeMatch[3] === 'pm' && hours < 12) hours += 12;
+            if(timeMatch[3] === 'am' && hours === 12) hours = 0;
+            timeStr = `${String(hours).padStart(2, '0')}:${mins}`;
+        }
+
+        // 4. Extract Title
+        let nameStr = input
+            .replace(/tomorrow|today/g, '')
+            .replace(/next/g, '')
+            .replace(/monday|tuesday|wednesday|thursday|friday|saturday|sunday/g, '')
+            .replace(/at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?/g, '')
+            .replace(/\d{1,2}(?::\d{2})?\s*(?:am|pm)/g, '')
+            .replace(/schedule a |schedule |add a |add |remind me to /g, '')
+            .replace(/for/g, '')
+            .trim();
+        
+        nameStr = nameStr.replace(/\s+/g, ' ');
+        if(!nameStr || nameStr.length < 2) nameStr = "New Task";
+        nameStr = nameStr.charAt(0).toUpperCase() + nameStr.slice(1); // Capitalize
+
+        // 5. Save Data
+        const formattedDate = formatDate(dateObj);
+        tasks.push({ 
+            id: Date.now(), name: nameStr, date: formattedDate, time: timeStr, 
+            type: type, desc: 'Generated by Neon AI ✨', notify: true, alerted: false, completed: false 
+        });
+        
+        saveData();
+        
+        // 6. UI Feedback
+        responseDiv.innerHTML = `<span style="color:#10b981;">✔ Scheduled!</span><br><b>${nameStr}</b> on ${formattedDate} @ ${timeStr}.`;
+        document.getElementById('aiPrompt').value = '';
+        
+        setTimeout(() => {
+            if(document.getElementById('aiModal').classList.contains('active')) { toggleAI(); responseDiv.innerHTML = ''; }
+        }, 2500);
+    }
+
+    // --- CALENDAR LOGIC ---
+    function linkify(text) {
+        if (!text) return '';
+        return text.replace(/(https?:\/\/[^\s]+)/g, url => `<br><a href="${url}" target="_blank" class="task-link" onclick="event.stopPropagation()">🔗 Open Link</a>`);
+    }
+
+    function selectDate(dateStr) {
+        document.getElementById('taskDate').value = dateStr;
+        document.getElementById('taskName').focus();
+    }
 
     function addTask() {
         const name = document.getElementById('taskName').value;
         const date = document.getElementById('taskDate').value;
         const time = document.getElementById('taskTime').value;
-        const type = document.getElementById('taskType').value;
-
         if (!name || !date || !time) return;
 
-        tasks.push({
-            id: Date.now(),
-            name,
-            date,
-            time,
-            type,
-            notify: true,
-            alerted: false
+        tasks.push({ 
+            id: Date.now(), name, date, time, 
+            type: document.getElementById('taskType').value, 
+            desc: document.getElementById('taskDesc').value, 
+            notify: true, alerted: false, completed: false 
         });
-
-        saveAndRender();
-    }
-
-    function saveAndRender() {
-        localStorage.setItem('neon_tasks', JSON.stringify(tasks));
-        renderCalendar();
-        renderList();
-    }
-
-    function renderCalendar() {
-        const grid = document.getElementById('calendarGrid');
-        grid.innerHTML = '';
         
-        // Render 31 days (for March 2026)
-        for (let i = 1; i <= 31; i++) {
-            const dateStr = `2026-03-${String(i).padStart(2, '0')}`;
-            const isToday = i === new Date().getDate();
-            
-            let dayHtml = `<div class="day-cell ${isToday ? 'today' : ''}">
-                <div class="day-num">${i}</div>`;
-            
-            // Find tasks for this specific day
-            const dayTasks = tasks.filter(t => t.date === dateStr);
-            dayTasks.forEach(t => {
-                dayHtml += `<div class="task-tag">${t.time} ${t.name}</div>`;
-            });
+        document.getElementById('taskName').value = ''; document.getElementById('taskDesc').value = '';
+        saveData();
+    }
 
-            dayHtml += `</div>`;
-            grid.innerHTML += dayHtml;
+    function deleteTask(id) { tasks = tasks.filter(t => t.id !== id); saveData(); }
+    
+    function toggleComplete(id, event) {
+        event.stopPropagation(); // Prevents clicking the day cell
+        tasks = tasks.map(t => t.id === id ? {...t, completed: !t.completed} : t);
+        saveData();
+    }
+
+    function saveData() { localStorage.setItem('neon_dash_v4', JSON.stringify(tasks)); updateUI(); }
+    function setView(view) {
+        currentView = view;
+        document.querySelectorAll('.view-tabs button').forEach(b => b.classList.remove('active'));
+        document.getElementById(`btn-${view}`).classList.add('active');
+        updateUI();
+    }
+    function navigate(dir) {
+        if (currentView === 'month') baseDate.setMonth(baseDate.getMonth() + dir);
+        if (currentView === 'year') baseDate.setFullYear(baseDate.getFullYear() + dir);
+        if (currentView === 'week') baseDate.setDate(baseDate.getDate() + (dir * 7));
+        if (currentView === 'day') baseDate.setDate(baseDate.getDate() + dir);
+        updateUI();
+    }
+    function goToday() { baseDate = new Date(); updateUI(); }
+    function formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+    function getTagClass(t) {
+        let base = 'task-tag';
+        if (t.type === 'Event') base += ' event-type';
+        if (t.type === 'School') base += ' school-type';
+        if (t.completed) base += ' completed';
+        return base;
+    }
+
+    function updateUI() {
+        const area = document.getElementById('calendarArea');
+        const header = document.getElementById('displayDate');
+        area.innerHTML = '';
+
+        const year = baseDate.getFullYear();
+        const month = baseDate.getMonth();
+        const todayStr = formatDate(new Date());
+
+        if (currentView === 'year') {
+            header.innerText = year;
+            let html = '<div class="grid-year-full">';
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            for (let m = 0; m < 12; m++) {
+                html += `<div class="year-month-card"><div class="year-month-title">${monthNames[m]}</div><div class="year-days-grid">`;
+                ['S','M','T','W','T','F','S'].forEach(d => html += `<div class="year-day-header">${d}</div>`);
+                const firstDay = new Date(year, m, 1).getDay();
+                const daysInMonth = new Date(year, m + 1, 0).getDate();
+                for(let i=0; i<firstDay; i++) html += `<div></div>`; 
+                for(let i=1; i<=daysInMonth; i++) {
+                    const dateStr = `${year}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                    const hasTask = tasks.some(t => t.date === dateStr && !t.completed); // Only highlights if there are UNFINISHED tasks
+                    let classes = `year-day-circle ${dateStr === todayStr ? 'current-day' : ''} ${hasTask ? 'has-task' : ''}`;
+                    html += `<div class="${classes}" onclick="baseDate=new Date('${dateStr}T12:00:00'); selectDate('${dateStr}'); setView('day');">${i}</div>`;
+                }
+                html += `</div></div>`;
+            }
+            area.innerHTML = html + '</div>';
         }
-    }
+        else if (currentView === 'month' || currentView === 'week') {
+            let start, end, loopDays;
+            if (currentView === 'month') {
+                header.innerText = baseDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                start = new Date(year, month, 1);
+                loopDays = new Date(year, month + 1, 0).getDate() + start.getDay();
+                start.setDate(1 - start.getDay()); // Roll back to Sunday
+            } else {
+                start = new Date(baseDate); start.setDate(start.getDate() - start.getDay());
+                const endW = new Date(start); endW.setDate(start.getDate() + 6);
+                header.innerText = `${start.toLocaleDateString('en-US', {month:'short', day:'numeric'})} - ${endW.toLocaleDateString('en-US', {month:'short', day:'numeric'})}`;
+                loopDays = 7;
+            }
 
-    function renderList() {
+            let html = '<div class="grid-header-row">';
+            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => html += `<div class="day-cell header">${d}</div>`);
+            html += '</div><div class="grid-body">';
+
+            for(let i=0; i<loopDays; i++) {
+                const cur = new Date(start); cur.setDate(start.getDate() + i);
+                const dateStr = formatDate(cur);
+                const isInactive = currentView === 'month' && cur.getMonth() !== month;
+                
+                html += `<div class="day-cell ${dateStr === todayStr ? 'today' : ''} ${isInactive ? 'inactive' : ''}" onclick="selectDate('${dateStr}')">
+                            <div class="day-num">${currentView==='week'? cur.toLocaleDateString('en-US',{weekday:'short'})+' ':''}${cur.getDate()}</div>`;
+                
+                tasks.filter(t => t.date === dateStr).sort((a,b) => a.time.localeCompare(b.time)).forEach(t => {
+                    html += `<div class="${getTagClass(t)}">
+                                <div class="task-header">
+                                    <span>${t.time} ${t.name}</span>
+                                    <input type="checkbox" class="complete-cb" ${t.completed ? 'checked' : ''} onclick="toggleComplete(${t.id}, event)" title="Mark Complete">
+                                </div>
+                                ${!t.completed && t.desc ? `<div style="font-weight:normal;">${linkify(t.desc)}</div>` : ''}
+                             </div>`;
+                });
+                html += `</div>`;
+            }
+            area.innerHTML = html + '</div>';
+        }
+        else if (currentView === 'day') {
+            header.innerText = baseDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            const dateStr = formatDate(baseDate);
+            let html = '<div style="flex-grow:1; overflow-y:auto; padding-right:10px;">';
+            const dayTasks = tasks.filter(t => t.date === dateStr).sort((a,b) => a.time.localeCompare(b.time));
+            
+            if(dayTasks.length === 0) html += `<div style="text-align:center; color: var(--border); margin-top:20px;">No scheduled items.</div>`;
+            
+            dayTasks.forEach(t => {
+                let color = t.type === 'Event' ? 'var(--event-color)' : (t.type === 'School' ? 'var(--school-color)' : 'var(--accent)');
+                html += `
+                    <div style="background:var(--bg); border:1px solid var(--border); border-left:4px solid ${color}; padding:15px; border-radius:8px; margin-bottom:10px; ${t.completed ? 'opacity:0.5;' : ''}">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <strong style="color: ${color}; font-size: 1.2rem; margin-right:15px; ${t.completed ? 'text-decoration:line-through;' : ''}">${t.time}</strong>
+                                <span style="font-weight: bold; font-size: 1.1rem; ${t.completed ? 'text-decoration:line-through;' : ''}">${t.name}</span>
+                            </div>
+                            <label style="display:flex; align-items:center; gap:8px; color:white; cursor:pointer;">
+                                Done: <input type="checkbox" class="complete-cb" style="width:20px; height:20px;" ${t.completed ? 'checked' : ''} onchange="toggleComplete(${t.id}, event)">
+                            </label>
+                        </div>
+                        ${t.desc ? `<div style="font-size:0.85rem; color:var(--text); margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">${linkify(t.desc)}</div>` : ''}
+                    </div>`;
+            });
+            area.innerHTML = html + '</div>';
+        }
+
+        // --- Render Side List ---
         const list = document.getElementById('masterList');
-        // Clear previous except header
-        list.innerHTML = '<h3>Notification Management</h3>';
-        
+        list.innerHTML = '';
         tasks.sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time)).forEach(t => {
+            if (t.completed) return; // Hide completed tasks from the active sidebar
             const item = document.createElement('div');
-            item.className = 'task-list-item';
+            item.style.cssText = 'background: var(--bg); padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;';
             item.innerHTML = `
-                <div>
-                    <strong style="color:var(--accent)">${t.name}</strong><br>
-                    <small>${t.date} @ ${t.time}</small>
+                <div style="max-width: 200px; overflow: hidden;">
+                    <strong style="color:${t.type==='School'?'var(--school-color)':t.type==='Event'?'var(--event-color)':'var(--accent)'}; font-size:0.85rem; display:block; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${t.name}</strong>
+                    <span style="color: #94a3b8; font-size: 0.75rem;">${t.date.slice(5)} @ ${t.time}</span>
                 </div>
-                <div style="display:flex; align-items:center; gap:15px;">
-                    <label class="switch">
-                        <input type="checkbox" ${t.notify ? 'checked' : ''} onchange="toggleNotify(${t.id})">
-                        <span class="slider"></span>
-                    </label>
-                    <button onclick="deleteTask(${t.id})" style="background:none; border:none; color:#ff4444; cursor:pointer;">✕</button>
-                </div>
+                <button onclick="deleteTask(${t.id})" style="background:none; border:none; color:#ff4444; font-size:1.1rem; cursor:pointer; padding:5px;">✕</button>
             `;
             list.appendChild(item);
         });
     }
 
-    function toggleNotify(id) {
-        tasks = tasks.map(t => t.id === id ? {...t, notify: !t.notify, alerted: false} : t);
-        saveAndRender();
-    }
-
-    function deleteTask(id) {
-        tasks = tasks.filter(t => t.id !== id);
-        saveAndRender();
-    }
-
-    // THE PRECISION NOTIFICATION ENGINE
-    if (Notification.permission !== 'granted') Notification.requestPermission();
-
-    setInterval(() => {
-        const now = new Date();
-        const curDate = now.toISOString().split('T')[0];
-        const curTime = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
-
-        tasks.forEach(t => {
-            if (t.notify && !t.alerted && t.date === curDate && t.time === curTime) {
-                // Trigger Visual Alert
-                new Notification(`🚨 ${t.name}`, {
-                    body: `Time is up! Scheduled for ${t.time}`,
-                    requireInteraction: true
-                });
-
-                // Auto-disable notification so it doesn't repeat
-                t.alerted = true;
-                saveAndRender();
-            }
-        });
-    }, 1000);
-
-    renderCalendar();
-    renderList();
+    updateUI();
 </script>
 
 </body>
