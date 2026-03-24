@@ -2,179 +2,288 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Desktop Calendar</title>
+    <title>Neon Night Calendar</title>
     <style>
-        :root { --primary: #4285f4; --bg: #f8f9fa; --card: #ffffff; }
-        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; }
-        
-        .app-container { width: 95%; max-width: 1000px; background: var(--card); margin-top: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; }
-        
-        /* Navigation & Tabs */
-        .header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .view-tabs button { padding: 8px 16px; margin-left: 5px; border: none; background: #eee; border-radius: 20px; cursor: pointer; transition: 0.3s; }
-        .view-tabs button.active { background: var(--primary); color: white; }
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --accent: #38bdf8;
+            --text: #f1f5f9;
+            --task-bg: #334155;
+            --border: #475569;
+        }
 
-        /* Input Section */
-        .input-bar { padding: 15px 20px; background: #f1f3f4; display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr; gap: 10px; }
-        input, select, .btn-add { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-        .btn-add { background: var(--primary); color: white; font-weight: bold; cursor: pointer; border: none; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
 
-        /* Calendar Display */
-        .calendar-display { flex-grow: 1; padding: 20px; overflow-y: auto; min-height: 400px; }
-        .grid { display: grid; gap: 10px; }
-        .grid-month { grid-template-columns: repeat(7, 1fr); }
-        .day-box { border: 1px solid #eee; min-height: 80px; padding: 5px; border-radius: 4px; font-size: 0.8rem; }
-        .today { background: #e8f0fe; border: 1px solid var(--primary); }
-
-        /* Task List Items */
-        .task-item { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #eee; padding: 8px 12px; margin-bottom: 5px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .task-info { display: flex; flex-direction: column; }
-        .controls { display: flex; align-items: center; gap: 15px; }
+        /* Layout & Header */
+        .container { width: 95%; max-width: 1200px; padding: 20px; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         
-        /* Toggle Switch */
-        .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        /* Input Styling */
+        .input-grid { 
+            display: grid; 
+            grid-template-columns: 2fr 1fr 1fr 1fr auto; 
+            gap: 15px; 
+            margin-bottom: 30px; 
+            align-items: end;
+        }
+        
+        label { display: block; font-size: 0.8rem; margin-bottom: 5px; color: var(--accent); }
+        input, select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            width: 100%;
+            outline: none;
+        }
+
+        .btn-add {
+            background: var(--accent);
+            color: var(--bg);
+            font-weight: bold;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-add:hover { transform: translateY(-2px); box-shadow: 0 0 15px var(--accent); }
+
+        /* Calendar Grid */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-bottom: 40px;
+        }
+
+        .day-cell {
+            background: var(--card);
+            border: 1px solid var(--border);
+            min-height: 120px;
+            border-radius: 8px;
+            padding: 10px;
+            position: relative;
+        }
+
+        .day-num { font-weight: bold; margin-bottom: 8px; font-size: 0.9rem; opacity: 0.5; }
+        .today { border: 2px solid var(--accent); box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.2); }
+
+        /* Task Tags inside Calendar */
+        .task-tag {
+            background: var(--accent);
+            color: var(--bg);
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: bold;
+        }
+
+        /* List View Switches */
+        .task-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--task-bg);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+
+        .switch { position: relative; width: 45px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--primary); }
-        input:checked + .slider:before { transform: translateX(14px); }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #475569; transition: .4s; border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(21px); }
+
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <div class="header">
-        <h2 id="currentLabel">Calendar</h2>
-        <div class="view-tabs">
-            <button onclick="changeView('day')" id="btn-day">Day</button>
-            <button onclick="changeView('week')" id="btn-week">Week</button>
-            <button onclick="changeView('month')" id="btn-month" class="active">Month</button>
-            <button onclick="changeView('year')" id="btn-year">Year</button>
+<div class="container">
+    <header>
+        <h1>MARCH 2026</h1>
+        <div style="font-size: 0.9rem; color: var(--accent);">System: Online & Armed</div>
+    </header>
+
+    <div class="glass input-grid">
+        <div>
+            <label>TASK NAME</label>
+            <input type="text" id="taskName" placeholder="e.g. Gym Session">
         </div>
+        <div>
+            <label>DATE</label>
+            <input type="date" id="taskDate">
+        </div>
+        <div>
+            <label>TIME (5m Incr.)</label>
+            <input type="time" id="taskTime" step="300"> 
+        </div>
+        <div>
+            <label>CATEGORY</label>
+            <select id="taskType">
+                <option value="Event">Event 📅</option>
+                <option value="Task">Task ✅</option>
+            </select>
+        </div>
+        <button class="btn-add" onclick="addTask()">ADD</button>
     </div>
 
-    <div class="input-bar">
-        <input type="text" id="taskName" placeholder="New Task/Event...">
-        <input type="datetime-local" id="taskTime">
-        <select id="taskType">
-            <option value="Task">Task</option>
-            <option value="Event">Event</option>
-        </select>
-        <button class="btn-add" onclick="addTask()">Add</button>
-    </div>
+    <div class="calendar-grid" id="calendarGrid">
+        </div>
 
-    <div id="displayArea" class="calendar-display">
+    <div id="masterList">
+        <h3>Notification Management</h3>
         </div>
 </div>
 
 <script>
-    let tasks = JSON.parse(localStorage.getItem('cal_tasks')) || [];
-    let currentView = 'month';
+    let tasks = JSON.parse(localStorage.getItem('neon_tasks')) || [];
 
-    // Request Notification Permission
-    if (Notification.permission !== "granted") {
-        Notification.requestPermission();
-    }
+    // Set default date to today for convenience
+    document.getElementById('taskDate').valueAsDate = new Date();
 
     function addTask() {
         const name = document.getElementById('taskName').value;
+        const date = document.getElementById('taskDate').value;
         const time = document.getElementById('taskTime').value;
         const type = document.getElementById('taskType').value;
 
-        if (!name || !time) return;
+        if (!name || !date || !time) return;
 
-        const newTask = {
+        tasks.push({
             id: Date.now(),
             name,
+            date,
             time,
             type,
-            notify: true
-        };
+            notify: true,
+            alerted: false
+        });
 
-        tasks.push(newTask);
-        saveAndRefresh();
+        saveAndRender();
     }
 
-    function toggleNotify(id) {
-        tasks = tasks.map(t => t.id === id ? {...t, notify: !t.notify} : t);
-        saveAndRefresh();
+    function saveAndRender() {
+        localStorage.setItem('neon_tasks', JSON.stringify(tasks));
+        renderCalendar();
+        renderList();
     }
 
-    function deleteTask(id) {
-        tasks = tasks.filter(t => t.id !== id);
-        saveAndRefresh();
-    }
-
-    function saveAndRefresh() {
-        localStorage.setItem('cal_tasks', JSON.stringify(tasks));
-        render();
-    }
-
-    function changeView(view) {
-        currentView = view;
-        document.querySelectorAll('.view-tabs button').forEach(b => b.classList.remove('active'));
-        document.getElementById('btn-' + view).classList.add('active');
-        render();
-    }
-
-    function render() {
-        const display = document.getElementById('displayArea');
-        display.innerHTML = '';
+    function renderCalendar() {
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
         
-        // Filter tasks based on view logic could go here, 
-        // but for simplicity, we'll show a "Master List" sorted by date 
-        // and a visual layout for the month.
-        
-        if (currentView === 'month') {
-            display.innerHTML = `<div class="grid grid-month" id="calendarGrid"></div>`;
-            const grid = document.getElementById('calendarGrid');
-            for(let i=1; i<=31; i++) {
-                grid.innerHTML += `<div class="day-box"><strong>${i}</strong></div>`;
-            }
+        // Render 31 days (for March 2026)
+        for (let i = 1; i <= 31; i++) {
+            const dateStr = `2026-03-${String(i).padStart(2, '0')}`;
+            const isToday = i === new Date().getDate();
+            
+            let dayHtml = `<div class="day-cell ${isToday ? 'today' : ''}">
+                <div class="day-num">${i}</div>`;
+            
+            // Find tasks for this specific day
+            const dayTasks = tasks.filter(t => t.date === dateStr);
+            dayTasks.forEach(t => {
+                dayHtml += `<div class="task-tag">${t.time} ${t.name}</div>`;
+            });
+
+            dayHtml += `</div>`;
+            grid.innerHTML += dayHtml;
         }
+    }
 
-        const taskSection = document.createElement('div');
-        taskSection.innerHTML = '<h3>Your Schedule</h3>';
+    function renderList() {
+        const list = document.getElementById('masterList');
+        // Clear previous except header
+        list.innerHTML = '<h3>Notification Management</h3>';
         
-        tasks.sort((a,b) => new Date(a.time) - new Date(b.time)).forEach(t => {
+        tasks.sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time)).forEach(t => {
             const item = document.createElement('div');
-            item.className = 'task-item';
+            item.className = 'task-list-item';
             item.innerHTML = `
-                <div class="task-info">
-                    <strong>${t.name}</strong>
-                    <span>${new Date(t.time).toLocaleString()} (${t.type})</span>
+                <div>
+                    <strong style="color:var(--accent)">${t.name}</strong><br>
+                    <small>${t.date} @ ${t.time}</small>
                 </div>
-                <div class="controls">
+                <div style="display:flex; align-items:center; gap:15px;">
                     <label class="switch">
                         <input type="checkbox" ${t.notify ? 'checked' : ''} onchange="toggleNotify(${t.id})">
                         <span class="slider"></span>
                     </label>
-                    <button onclick="deleteTask(${t.id})" style="color:red; border:none; background:none; cursor:pointer;">Delete</button>
+                    <button onclick="deleteTask(${t.id})" style="background:none; border:none; color:#ff4444; cursor:pointer;">✕</button>
                 </div>
             `;
-            taskSection.appendChild(item);
+            list.appendChild(item);
         });
-        display.appendChild(taskSection);
     }
 
-    // THE NOTIFICATION ENGINE
+    function toggleNotify(id) {
+        tasks = tasks.map(t => t.id === id ? {...t, notify: !t.notify, alerted: false} : t);
+        saveAndRender();
+    }
+
+    function deleteTask(id) {
+        tasks = tasks.filter(t => t.id !== id);
+        saveAndRender();
+    }
+
+    // THE PRECISION NOTIFICATION ENGINE
+    if (Notification.permission !== 'granted') Notification.requestPermission();
+
     setInterval(() => {
         const now = new Date();
+        const curDate = now.toISOString().split('T')[0];
+        const curTime = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
+
         tasks.forEach(t => {
-            const tDate = new Date(t.time);
-            // If task is within the next 60 seconds and notify is ON
-            if (t.notify && Math.abs(tDate - now) < 30000 && !t.alerted) {
-                new Notification(`${t.type}: ${t.name}`, {
-                    body: `Starting at ${tDate.toLocaleTimeString()}`,
-                    requireInteraction: true // Keeps it on screen until you dismiss it
+            if (t.notify && !t.alerted && t.date === curDate && t.time === curTime) {
+                // Trigger Visual Alert
+                new Notification(`🚨 ${t.name}`, {
+                    body: `Time is up! Scheduled for ${t.time}`,
+                    requireInteraction: true
                 });
-                t.alerted = true; // Prevents double notifications
+
+                // Auto-disable notification so it doesn't repeat
+                t.alerted = true;
+                saveAndRender();
             }
         });
-    }, 30000); // Check every 30 seconds
+    }, 1000);
 
-    render();
+    renderCalendar();
+    renderList();
 </script>
+
 </body>
 </html>
