@@ -11,6 +11,7 @@
             --accent: #38bdf8; 
             --event-color: #a855f7; 
             --school-color: #f59e0b; 
+            --danger: #ef4444; 
             --text: #f1f5f9;
             --task-bg: #334155;
             --border: #475569;
@@ -32,7 +33,7 @@
         }
 
         label { display: block; font-size: 0.75rem; color: var(--accent); font-weight: bold; margin-bottom: 2px; }
-        input, select, textarea {
+        input[type="text"], input[type="date"], input[type="time"], select, textarea {
             background: var(--bg); border: 1px solid var(--border); color: white;
             padding: 8px 10px; border-radius: 6px; width: 100%; box-sizing: border-box; outline: none;
             color-scheme: dark; font-family: inherit;
@@ -44,6 +45,21 @@
             padding: 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-top: 5px;
         }
         .btn-add:hover { box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+
+        .btn-notify {
+            background: var(--school-color); color: var(--bg); font-weight: bold; border: none;
+            padding: 10px; border-radius: 6px; cursor: pointer; transition: 0.2s; display: none;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+
+        /* TOGGLE SWITCH */
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(20px); }
 
         .list-container { flex-grow: 1; overflow-y: auto; padding-right: 5px; }
 
@@ -107,6 +123,7 @@
         .task-tag.event-type { background: var(--event-color); color: white; }
         .task-tag.school-type { background: var(--school-color); color: var(--bg); }
         .task-tag.completed { opacity: 0.5; text-decoration: line-through; }
+        .task-tag.overdue .time-label { color: var(--danger); font-weight: 900; background: rgba(0,0,0,0.2); padding: 0 3px; border-radius: 3px; }
         
         .task-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .complete-cb { cursor: pointer; width: 14px; height: 14px; margin: 0 0 0 5px; accent-color: #10b981; }
@@ -149,31 +166,45 @@
 
 <div class="dashboard">
     <div class="sidebar">
+        <button id="notifyBtn" class="btn-notify" onclick="requestNotificationPermission()">Enable Browser Notifications 🔔</button>
+
         <div class="glass-panel">
             <h3 style="margin:0; color:white; font-size:1.1rem;">New Entry</h3>
             <div>
                 <label>TITLE</label>
                 <input type="text" id="taskName" placeholder="e.g. Bio Essay">
             </div>
-            <div>
-                <label>DATE (Click calendar to auto-fill)</label>
-                <input type="date" id="taskDate">
-            </div>
-            <div>
-                <label>TIME</label>
-                <input type="time" id="taskTime" step="300"> 
+            <div style="display: flex; gap: 10px;">
+                <div style="flex-grow: 1;">
+                    <label>DATE</label>
+                    <input type="date" id="taskDate">
+                </div>
+                <div>
+                    <label>TIME</label>
+                    <input type="time" id="taskTime" step="300"> 
+                </div>
             </div>
             <div>
                 <label>TYPE</label>
                 <select id="taskType">
                     <option value="School">School Assignment 🎒</option>
-                    <option value="Task">Task ✔</option> <option value="Event">Event 📅</option>
+                    <option value="Task">Task ✔</option>
+                    <option value="Event">Event 📅</option>
                 </select>
             </div>
             <div>
                 <label>DESCRIPTION & LINKS</label>
                 <textarea id="taskDesc" rows="2" placeholder="Notes or paste a link..."></textarea>
             </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                <label style="margin:0;">NOTIFY WHEN DUE?</label>
+                <label class="switch">
+                    <input type="checkbox" id="taskNotify" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
             <button class="btn-add" onclick="addTask()">ADD TO SCHEDULE</button>
         </div>
 
@@ -224,9 +255,36 @@
     let tasks = JSON.parse(localStorage.getItem('neon_dash_v4')) || [];
     let currentView = 'month';
     let baseDate = new Date();
+    
+    // Auto-update variables
+    function formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+    let lastKnownToday = formatDate(new Date());
 
     document.getElementById('taskDate').valueAsDate = new Date();
-    if (Notification.permission !== 'granted') Notification.requestPermission();
+
+    // --- NOTIFICATION PERMISSION LOGIC ---
+    function checkNotificationStatus() {
+        if ("Notification" in window) {
+            if (Notification.permission === "default") {
+                document.getElementById('notifyBtn').style.display = "block";
+            } else {
+                document.getElementById('notifyBtn').style.display = "none";
+            }
+        }
+    }
+    
+    function requestNotificationPermission() {
+        if ("Notification" in window) {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    document.getElementById('notifyBtn').style.display = "none";
+                    new Notification("Notifications Enabled!", { body: "You will now get alerts for tasks with notifications turned on." });
+                }
+            });
+        }
+    }
+    
+    checkNotificationStatus(); // Run on load
 
     // --- AI LOGIC ENGINE ---
     function toggleAI() {
@@ -248,20 +306,14 @@
         const responseDiv = document.getElementById('aiResponse');
         if(!input) return;
 
-        // 1. Determine Type
         let type = 'Task';
         if(input.match(/school|homework|essay|class|assignment|exam|study/)) type = 'School';
         else if(input.match(/event|party|meeting|dinner|hangout/)) type = 'Event';
 
-        // 2. Determine Date
         let dateObj = new Date();
-        let dateSet = false;
-        
         if (input.includes('tomorrow')) {
-            dateObj.setDate(dateObj.getDate() + 1); dateSet = true;
-        } else if (input.includes('today')) {
-            dateSet = true;
-        } else {
+            dateObj.setDate(dateObj.getDate() + 1);
+        } else if (!input.includes('today')) {
             const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
             for (let i = 0; i < days.length; i++) {
                 if (input.includes(days[i])) {
@@ -269,12 +321,11 @@
                     let diff = i - todayDay;
                     if (diff <= 0 || input.includes('next ' + days[i])) diff += 7;
                     dateObj.setDate(dateObj.getDate() + diff);
-                    dateSet = true; break;
+                    break;
                 }
             }
         }
 
-        // 3. Determine Time
         let timeStr = "12:00";
         const timeMatch = input.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/);
         if(timeMatch) {
@@ -285,7 +336,6 @@
             timeStr = `${String(hours).padStart(2, '0')}:${mins}`;
         }
 
-        // 4. Extract Title
         let nameStr = input
             .replace(/tomorrow|today/g, '')
             .replace(/next/g, '')
@@ -298,18 +348,18 @@
         
         nameStr = nameStr.replace(/\s+/g, ' ');
         if(!nameStr || nameStr.length < 2) nameStr = "New Task";
-        nameStr = nameStr.charAt(0).toUpperCase() + nameStr.slice(1); // Capitalize
+        nameStr = nameStr.charAt(0).toUpperCase() + nameStr.slice(1);
 
-        // 5. Save Data
         const formattedDate = formatDate(dateObj);
         tasks.push({ 
             id: Date.now(), name: nameStr, date: formattedDate, time: timeStr, 
-            type: type, desc: 'Generated by Neon AI ✨', notify: true, alerted: false, completed: false 
+            type: type, desc: 'Generated by Neon AI ✨', 
+            notify: true, // AI tasks default to getting a notification
+            alerted: false, completed: false 
         });
         
         saveData();
         
-        // 6. UI Feedback
         responseDiv.innerHTML = `<span style="color:#10b981;">✔ Scheduled!</span><br><b>${nameStr}</b> on ${formattedDate} @ ${timeStr}.`;
         document.getElementById('aiPrompt').value = '';
         
@@ -333,13 +383,15 @@
         const name = document.getElementById('taskName').value;
         const date = document.getElementById('taskDate').value;
         const time = document.getElementById('taskTime').value;
+        const wantsNotify = document.getElementById('taskNotify').checked;
         if (!name || !date || !time) return;
 
         tasks.push({ 
             id: Date.now(), name, date, time, 
             type: document.getElementById('taskType').value, 
             desc: document.getElementById('taskDesc').value, 
-            notify: true, alerted: false, completed: false 
+            notify: wantsNotify, // Uses the toggle switch state
+            alerted: false, completed: false 
         });
         
         document.getElementById('taskName').value = ''; document.getElementById('taskDesc').value = '';
@@ -349,8 +401,14 @@
     function deleteTask(id) { tasks = tasks.filter(t => t.id !== id); saveData(); }
     
     function toggleComplete(id, event) {
-        event.stopPropagation(); // Prevents clicking the day cell
+        event.stopPropagation();
         tasks = tasks.map(t => t.id === id ? {...t, completed: !t.completed} : t);
+        saveData();
+    }
+    
+    function toggleTaskNotify(id, event) {
+        event.stopPropagation();
+        tasks = tasks.map(t => t.id === id ? {...t, notify: !t.notify, alerted: false} : t);
         saveData();
     }
 
@@ -369,13 +427,13 @@
         updateUI();
     }
     function goToday() { baseDate = new Date(); updateUI(); }
-    function formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
-    function getTagClass(t) {
+    function getTagClass(t, isOverdue) {
         let base = 'task-tag';
         if (t.type === 'Event') base += ' event-type';
         if (t.type === 'School') base += ' school-type';
         if (t.completed) base += ' completed';
+        if (isOverdue) base += ' overdue';
         return base;
     }
 
@@ -387,6 +445,10 @@
         const year = baseDate.getFullYear();
         const month = baseDate.getMonth();
         const todayStr = formatDate(new Date());
+        
+        // Calculate current time for overdue checks
+        const now = new Date();
+        const curTimeStr = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
 
         if (currentView === 'year') {
             header.innerText = year;
@@ -400,7 +462,7 @@
                 for(let i=0; i<firstDay; i++) html += `<div></div>`; 
                 for(let i=1; i<=daysInMonth; i++) {
                     const dateStr = `${year}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-                    const hasTask = tasks.some(t => t.date === dateStr && !t.completed); // Only highlights if there are UNFINISHED tasks
+                    const hasTask = tasks.some(t => t.date === dateStr && !t.completed); 
                     let classes = `year-day-circle ${dateStr === todayStr ? 'current-day' : ''} ${hasTask ? 'has-task' : ''}`;
                     html += `<div class="${classes}" onclick="baseDate=new Date('${dateStr}T12:00:00'); selectDate('${dateStr}'); setView('day');">${i}</div>`;
                 }
@@ -414,7 +476,7 @@
                 header.innerText = baseDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                 start = new Date(year, month, 1);
                 loopDays = new Date(year, month + 1, 0).getDate() + start.getDay();
-                start.setDate(1 - start.getDay()); // Roll back to Sunday
+                start.setDate(1 - start.getDay());
             } else {
                 start = new Date(baseDate); start.setDate(start.getDate() - start.getDay());
                 const endW = new Date(start); endW.setDate(start.getDate() + 6);
@@ -435,9 +497,10 @@
                             <div class="day-num">${currentView==='week'? cur.toLocaleDateString('en-US',{weekday:'short'})+' ':''}${cur.getDate()}</div>`;
                 
                 tasks.filter(t => t.date === dateStr).sort((a,b) => a.time.localeCompare(b.time)).forEach(t => {
-                    html += `<div class="${getTagClass(t)}">
+                    const isOverdue = !t.completed && t.date === todayStr && t.time < curTimeStr;
+                    html += `<div class="${getTagClass(t, isOverdue)}">
                                 <div class="task-header">
-                                    <span>${t.time} ${t.name}</span>
+                                    <span><span class="time-label">${t.time}</span> ${t.name}</span>
                                     <input type="checkbox" class="complete-cb" ${t.completed ? 'checked' : ''} onclick="toggleComplete(${t.id}, event)" title="Mark Complete">
                                 </div>
                                 ${!t.completed && t.desc ? `<div style="font-weight:normal;">${linkify(t.desc)}</div>` : ''}
@@ -457,12 +520,16 @@
             
             dayTasks.forEach(t => {
                 let color = t.type === 'Event' ? 'var(--event-color)' : (t.type === 'School' ? 'var(--school-color)' : 'var(--accent)');
+                const isOverdue = !t.completed && t.date === todayStr && t.time < curTimeStr;
+                let timeColor = isOverdue ? 'var(--danger)' : color;
+
                 html += `
                     <div style="background:var(--bg); border:1px solid var(--border); border-left:4px solid ${color}; padding:15px; border-radius:8px; margin-bottom:10px; ${t.completed ? 'opacity:0.5;' : ''}">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div>
-                                <strong style="color: ${color}; font-size: 1.2rem; margin-right:15px; ${t.completed ? 'text-decoration:line-through;' : ''}">${t.time}</strong>
+                                <strong style="color: ${timeColor}; font-size: 1.2rem; margin-right:15px; ${t.completed ? 'text-decoration:line-through;' : ''}">${t.time} ${isOverdue ? '⚠️' : ''}</strong>
                                 <span style="font-weight: bold; font-size: 1.1rem; ${t.completed ? 'text-decoration:line-through;' : ''}">${t.name}</span>
+                                <span style="cursor:pointer; font-size: 0.9rem; margin-left: 10px;" onclick="toggleTaskNotify(${t.id}, event)" title="Toggle Notification">${t.notify ? '🔔' : '🔕'}</span>
                             </div>
                             <label style="display:flex; align-items:center; gap:8px; color:white; cursor:pointer;">
                                 Done: <input type="checkbox" class="complete-cb" style="width:20px; height:20px;" ${t.completed ? 'checked' : ''} onchange="toggleComplete(${t.id}, event)">
@@ -478,19 +545,52 @@
         const list = document.getElementById('masterList');
         list.innerHTML = '';
         tasks.sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time)).forEach(t => {
-            if (t.completed) return; // Hide completed tasks from the active sidebar
+            if (t.completed) return; 
+            const isOverdue = t.date === todayStr && t.time < curTimeStr;
+            const timeDisplayColor = isOverdue ? 'var(--danger)' : '#94a3b8';
+
             const item = document.createElement('div');
             item.style.cssText = 'background: var(--bg); padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;';
             item.innerHTML = `
                 <div style="max-width: 200px; overflow: hidden;">
-                    <strong style="color:${t.type==='School'?'var(--school-color)':t.type==='Event'?'var(--event-color)':'var(--accent)'}; font-size:0.85rem; display:block; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${t.name}</strong>
-                    <span style="color: #94a3b8; font-size: 0.75rem;">${t.date.slice(5)} @ ${t.time}</span>
+                    <strong style="color:${t.type==='School'?'var(--school-color)':t.type==='Event'?'var(--event-color)':'var(--accent)'}; font-size:0.85rem; display:block; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+                        ${t.name} <span style="font-size:0.7rem;">${t.notify ? '🔔' : '🔕'}</span>
+                    </strong>
+                    <span style="color: ${timeDisplayColor}; font-size: 0.75rem; font-weight: ${isOverdue ? 'bold' : 'normal'}">${t.date.slice(5)} @ ${t.time}</span>
                 </div>
                 <button onclick="deleteTask(${t.id})" style="background:none; border:none; color:#ff4444; font-size:1.1rem; cursor:pointer; padding:5px;">✕</button>
             `;
             list.appendChild(item);
         });
     }
+
+    // THE TIMER / ROLLOVER ENGINE
+    setInterval(() => {
+        const now = new Date();
+        const curDate = formatDate(now);
+        const curTime = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
+
+        if (curDate !== lastKnownToday) {
+            if (formatDate(baseDate) === lastKnownToday) baseDate = new Date();
+            lastKnownToday = curDate;
+            updateUI(); 
+        }
+        if (now.getSeconds() === 0) updateUI();
+
+        // NOTIFICATION CHECK
+        tasks.forEach(t => {
+            if (t.notify && !t.alerted && !t.completed && t.date === curDate && t.time === curTime) {
+                if (Notification.permission === "granted") {
+                    new Notification(`🔔 Scheduled ${t.type}: ${t.name}`, { body: `Time is up!`, requireInteraction: true });
+                } else {
+                    // Fallback to browser alert if notifications aren't enabled
+                    alert(`🔔 Time is up for: ${t.name}`);
+                }
+                t.alerted = true;
+                saveData();
+            }
+        });
+    }, 1000);
 
     updateUI();
 </script>
