@@ -73,14 +73,23 @@
 
         body {
             font-family: 'Inter', system-ui, sans-serif; background-color: var(--bg); color: var(--text);
-            margin: 0; padding: 15px; height: 100vh; box-sizing: border-box;
-            display: flex; justify-content: center; overflow: hidden;
+            margin: 0; padding: 15px; min-height: 100vh; box-sizing: border-box;
+            display: flex; justify-content: center; overflow-y: auto; overflow-x: hidden;
         }
 
-        .dashboard { display: flex; gap: 20px; width: 100%; max-width: 1600px; height: 100%; }
+        .dashboard { display: flex; gap: 20px; width: 100%; max-width: 1600px; min-height: 100%; flex-wrap: wrap; }
 
         /* LEFT SIDEBAR */
-        .sidebar { width: 340px; display: flex; flex-direction: column; gap: 15px; height: 100%; }
+        .sidebar { width: 340px; min-width: 280px; display: flex; flex-direction: column; gap: 15px; height: auto; }
+        @media (max-width: 700px) {
+            .dashboard { flex-direction: column; padding-bottom: 100px; }
+            .sidebar { width: 100%; min-width: unset; }
+            .main-content { height: auto; min-height: 500px; }
+            .ai-fab { bottom: 15px; right: 15px; width: 54px; height: 54px; }
+            .ai-modal { right: 10px; left: 10px; width: auto; bottom: 80px; }
+            .logo-wrap { width: 34px; height: 34px; }
+            .app-logo { width: 34px; height: 34px; }
+        }
         .glass-panel {
             background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border);
             border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 10px;
@@ -119,8 +128,8 @@
 
         /* RIGHT MAIN CONTENT */
         .main-content {
-            flex-grow: 1; background: var(--card); border: 1px solid var(--border);
-            border-radius: 12px; padding: 20px; display: flex; flex-direction: column; height: 100%; box-sizing: border-box;
+            flex-grow: 1; min-width: 0; background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px; display: flex; flex-direction: column; height: auto; min-height: 500px; box-sizing: border-box;
         }
 
         .nav-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
@@ -263,8 +272,28 @@
     <div class="sidebar">
         <button id="notifyBtn" class="btn-notify" onclick="requestNotificationPermission()">Enable Browser Notifications 🔔</button>
 
+        <!-- BACKGROUND PUSH NOTIFICATIONS PANEL -->
+        <div class="glass-panel" id="pushPanel">
+            <h3 style="margin:0 0 8px 0; color:var(--text); font-size:1rem; text-align:center;">🔔 Background Alerts</h3>
+            <p style="margin:0 0 10px 0; font-size:0.75rem; color:#94a3b8; text-align:center; line-height:1.4;">Get notified even when the app is closed — works on iPhone via Safari "Add to Home Screen"</p>
+            <div id="pushStatus" style="font-size:0.78rem; text-align:center; margin-bottom:8px; padding:6px; border-radius:6px; background:var(--bg);">Checking support...</div>
+            <button class="btn-add" id="pushSubscribeBtn" onclick="subscribePush()" style="display:none;">Enable Background Alerts 🔔</button>
+            <button class="btn-add" id="pushUnsubscribeBtn" onclick="unsubscribePush()" style="background:#ef4444; display:none;">Disable Background Alerts</button>
+            <div id="swStatus" style="font-size:0.7rem; color:#64748b; text-align:center; margin-top:6px;"></div>
+            <details style="margin-top:8px;">
+                <summary style="font-size:0.72rem; color:#94a3b8; cursor:pointer;">📱 iPhone setup guide</summary>
+                <ol style="font-size:0.7rem; color:#94a3b8; margin:6px 0 0 0; padding-left:16px; line-height:1.6;">
+                    <li>Open this page in <strong>Safari</strong></li>
+                    <li>Tap the <strong>Share</strong> button (box with arrow)</li>
+                    <li>Tap <strong>"Add to Home Screen"</strong></li>
+                    <li>Open the app from your home screen</li>
+                    <li>Tap <strong>Enable Background Alerts</strong> above</li>
+                </ol>
+            </details>
+        </div>
+
         <div class="glass-panel">
-            <h3 style="margin:0; color:white; font-size:1.1rem;">New Entry</h3>
+            <h3 style="margin:0; color:var(--text); font-size:1.1rem;">New Entry</h3>
             <div>
                 <label>TITLE</label>
                 <input type="text" id="taskName" placeholder="e.g. Bio Essay">
@@ -334,14 +363,12 @@
 </div>
 
 <div class="ai-fab" onclick="toggleAI()" title="Open AI Scheduler">
-    <svg class="ai-icon" viewBox="0 0 24 24">
-        <path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z" />
-    </svg>
+    <span style="font-size:28px; line-height:1;">🌐</span>
 </div>
 
 <div class="ai-modal" id="aiModal">
     <h3 style="margin:0; color:var(--accent); display:flex; align-items:center; gap:8px;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/></svg>
+        <span style="font-size:20px;">🌐</span>
         Neon AI Core
     </h3>
     <p style="font-size:0.8rem; margin:0; color:#94a3b8;">Type naturally. Try: <i>"Schedule a bio exam for next Friday at 10am"</i></p>
@@ -360,6 +387,7 @@
 
     document.getElementById('taskDate').valueAsDate = new Date();
 
+    // ---- STANDARD IN-TAB NOTIFICATIONS ----
     function checkNotificationStatus() {
         if ("Notification" in window) {
             if (Notification.permission === "default") {
@@ -369,19 +397,194 @@
             }
         }
     }
-    
+
     function requestNotificationPermission() {
         if ("Notification" in window) {
             Notification.requestPermission().then(permission => {
                 if (permission === "granted") {
                     document.getElementById('notifyBtn').style.display = "none";
                     new Notification("Notifications Enabled!", { body: "You will now get alerts for tasks with notifications turned on." });
+                    checkPushSupport();
                 }
             });
         }
     }
-    
+
     checkNotificationStatus();
+
+    // ---- SERVICE WORKER + BACKGROUND PUSH NOTIFICATIONS ----
+    // NOTE: True push needs a server. This SW approach schedules
+    // notifications via the SW so they fire even with the tab closed,
+    // using the Web Notifications API + SW message scheduling.
+    // On iOS this requires the app to be saved to Home Screen first.
+
+    const SW_SCRIPT = `
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SCHEDULE_NOTIF') {
+        const { id, title, body, fireAt } = event.data;
+        const delay = fireAt - Date.now();
+        if (delay > 0) {
+            setTimeout(() => {
+                self.registration.showNotification(title, {
+                    body: body,
+                    icon: '/favicon.ico',
+                    tag: 'neon-task-' + id,
+                    requireInteraction: true,
+                    badge: '/favicon.ico'
+                });
+            }, delay);
+        }
+    }
+    if (event.data && event.data.type === 'CANCEL_NOTIF') {
+        // No direct cancel API; tag deduplication handles it
+    }
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(clients.openWindow(self.location.origin));
+});
+
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(clients.claim()));
+`;
+
+    let swRegistration = null;
+
+    async function registerServiceWorker() {
+        if (!('serviceWorker' in navigator)) return null;
+        try {
+            // Inline SW as blob URL
+            const blob = new Blob([SW_SCRIPT], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            const reg = await navigator.serviceWorker.register(swUrl, { scope: '/' });
+            swRegistration = reg;
+            return reg;
+        } catch(e) {
+            console.warn('SW registration failed:', e);
+            return null;
+        }
+    }
+
+    async function checkPushSupport() {
+        const statusEl = document.getElementById('pushStatus');
+        const subscribeBtn = document.getElementById('pushSubscribeBtn');
+        const unsubBtn = document.getElementById('pushUnsubscribeBtn');
+        const swStatusEl = document.getElementById('swStatus');
+
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        const hasNotif = 'Notification' in window;
+        const hasSW = 'serviceWorker' in navigator;
+
+        if (!hasNotif) {
+            statusEl.textContent = '❌ Notifications not supported on this browser';
+            statusEl.style.color = '#ef4444';
+            return;
+        }
+
+        if (isIOS && !isStandalone) {
+            statusEl.innerHTML = '📱 Add to Home Screen first (see guide below)';
+            statusEl.style.color = '#f59e0b';
+            subscribeBtn.style.display = 'none';
+            return;
+        }
+
+        const perm = Notification.permission;
+
+        if (perm === 'denied') {
+            statusEl.textContent = '🚫 Blocked — enable in browser settings';
+            statusEl.style.color = '#ef4444';
+            return;
+        }
+
+        if (perm === 'default') {
+            statusEl.textContent = '⚠️ Grant notification permission first';
+            statusEl.style.color = '#f59e0b';
+            document.getElementById('notifyBtn').style.display = 'block';
+            return;
+        }
+
+        // Permission granted — set up SW
+        const alreadyEnabled = localStorage.getItem('pushEnabled') === 'true';
+
+        if (!hasSW) {
+            statusEl.textContent = '⚠️ Background alerts limited on this browser';
+            statusEl.style.color = '#f59e0b';
+            subscribeBtn.style.display = 'block';
+            subscribeBtn.textContent = 'Enable Alerts (limited) 🔔';
+            return;
+        }
+
+        if (alreadyEnabled) {
+            statusEl.textContent = '✅ Background alerts active';
+            statusEl.style.color = '#10b981';
+            unsubBtn.style.display = 'block';
+            subscribeBtn.style.display = 'none';
+            swStatusEl.textContent = 'Alerts will fire even when this tab is closed';
+            await registerServiceWorker();
+            schedulePushNotifications();
+        } else {
+            statusEl.textContent = '💤 Background alerts off';
+            statusEl.style.color = '#94a3b8';
+            subscribeBtn.style.display = 'block';
+            unsubBtn.style.display = 'none';
+        }
+    }
+
+    async function subscribePush() {
+        if (Notification.permission !== 'granted') {
+            await Notification.requestPermission();
+        }
+        if (Notification.permission !== 'granted') return;
+
+        await registerServiceWorker();
+        localStorage.setItem('pushEnabled', 'true');
+        await checkPushSupport();
+        schedulePushNotifications();
+
+        // Confirmation notification
+        if (swRegistration) {
+            swRegistration.showNotification('🔔 Background Alerts On!', {
+                body: 'You will get notified about tasks even when the app is closed.',
+                tag: 'neon-setup'
+            });
+        } else {
+            new Notification('🔔 Background Alerts On!', { body: 'Alerts enabled!' });
+        }
+    }
+
+    async function unsubscribePush() {
+        localStorage.setItem('pushEnabled', 'false');
+        await checkPushSupport();
+    }
+
+    function schedulePushNotifications() {
+        if (!swRegistration) return;
+        // Send upcoming tasks to SW for scheduling
+        const now = Date.now();
+        tasks.forEach(t => {
+            if (t.notify && !t.completed && !t.alerted) {
+                const fireAt = new Date(t.date + 'T' + t.time).getTime();
+                if (fireAt > now) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        if (reg.active) {
+                            reg.active.postMessage({
+                                type: 'SCHEDULE_NOTIF',
+                                id: t.id,
+                                title: '\uD83D\uDD14 ' + t.type + ': ' + t.name,
+                                body: 'Scheduled for ' + t.time,
+                                fireAt: fireAt
+                            });
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    // Run push support check after page loads
+    setTimeout(checkPushSupport, 500);
 
     function toggleAI() {
         const modal = document.getElementById('aiModal');
@@ -449,7 +652,7 @@
         const formattedDate = formatDate(dateObj);
         tasks.push({ 
             id: Date.now(), name: nameStr, date: formattedDate, time: timeStr, 
-            type: type, desc: 'Generated by Neon AI', 
+            type: type, desc: 'Generated by Neon AI 🌐', 
             notify: true,
             alerted: false, completed: false 
         });
@@ -507,7 +710,7 @@
         saveData();
     }
 
-    function saveData() { localStorage.setItem('neon_dash_v4', JSON.stringify(tasks)); updateUI(); }
+    function saveData() { localStorage.setItem('neon_dash_v4', JSON.stringify(tasks)); updateUI(); if(localStorage.getItem('pushEnabled')==='true') schedulePushNotifications(); }
     function setView(view) {
         currentView = view;
         document.querySelectorAll('.view-tabs button').forEach(b => b.classList.remove('active'));
@@ -674,7 +877,7 @@
                 if (Notification.permission === "granted") {
                     new Notification(`🔔 Scheduled ${t.type}: ${t.name}`, { body: `Time is up!`, requireInteraction: true });
                 } else {
-                    alert(`⏰ Time is up for: ${t.name}`);
+                    alert(`🔔 Time is up for: ${t.name}`);
                 }
                 t.alerted = true;
                 saveData();
