@@ -48,7 +48,7 @@
             background: rgba(255,255,255,0.8);
         }
         body.light-mode .ai-modal {
-            background: rgba(240,249,255,0.97);
+            background: #0f172a; color: #f1f5f9;
         }
 
         /* PULSE WAVE OVERLAY */
@@ -71,6 +71,15 @@
             100% { width: 300vmax; height: 300vmax; opacity: 0; }
         }
 
+        /* OFFLINE INDICATOR */
+        .offline-badge {
+            position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+            background: #f59e0b; color: #0f172a; font-size: 0.72rem; font-weight: bold;
+            padding: 4px 14px; border-radius: 20px; z-index: 9998;
+            display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        body.offline .offline-badge { display: block; }
+
         body {
             font-family: 'Inter', system-ui, sans-serif; background-color: var(--bg); color: var(--text);
             margin: 0; padding: 15px; min-height: 100vh; box-sizing: border-box;
@@ -83,7 +92,8 @@
         .sidebar { width: 340px; min-width: 280px; display: flex; flex-direction: column; gap: 15px; height: auto; }
         @media (max-width: 700px) {
             .dashboard { flex-direction: column; padding-bottom: 100px; }
-            .sidebar { width: 100%; min-width: unset; }
+            .sidebar { width: 100%; min-width: unset; order: 2; }
+            .main-content { order: 1; }
             .main-content { height: auto; min-height: 500px; }
             .ai-fab { bottom: 15px; right: 15px; width: 54px; height: 54px; }
             .ai-modal { right: 10px; left: 10px; width: auto; bottom: 80px; }
@@ -239,17 +249,29 @@
         .ai-fab {
             position: fixed; bottom: 30px; right: 30px;
             width: 65px; height: 65px; border-radius: 50%;
-            background: linear-gradient(135deg, #38bdf8, #a855f7);
+            background: #ffffff;
             box-shadow: 0 0 25px rgba(168, 85, 247, 0.6);
             display: flex; justify-content: center; align-items: center;
-            cursor: pointer; z-index: 1000; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer; z-index: 1000; transition: background 0.4s ease, box-shadow 0.3s, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        body.light-mode .ai-fab {
+            background: #0f172a;
+            box-shadow: 0 0 25px rgba(2, 132, 199, 0.5);
+        }
+        .ai-globe {
+            font-size: 28px; line-height: 1;
+            filter: none;
+            transition: filter 0.4s ease;
+        }
+        body.light-mode .ai-globe {
+            filter: invert(1) hue-rotate(180deg);
         }
         .ai-fab:hover { transform: scale(1.1) rotate(5deg); box-shadow: 0 0 35px rgba(56, 189, 248, 0.8); }
         .ai-icon { width: 30px; height: 30px; fill: white; }
         
         .ai-modal {
             position: fixed; bottom: 110px; right: 30px;
-            width: 320px; background: rgba(15, 23, 42, 0.95);
+            width: 320px; background: #ffffff; color: #0f172a;
             border: 1px solid var(--accent); border-radius: 16px;
             padding: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
             backdrop-filter: blur(15px); display: none; z-index: 1000;
@@ -268,6 +290,7 @@
 </head>
 <body>
 
+<div class="offline-badge">📡 Offline — using cached version</div>
 <div class="dashboard">
     <div class="sidebar">
         <button id="notifyBtn" class="btn-notify" onclick="requestNotificationPermission()">Enable Browser Notifications 🔔</button>
@@ -363,7 +386,7 @@
 </div>
 
 <div class="ai-fab" onclick="toggleAI()" title="Open AI Scheduler">
-    <span style="font-size:28px; line-height:1;">🌐</span>
+    <span class="ai-globe">🌐</span>
 </div>
 
 <div class="ai-modal" id="aiModal">
@@ -371,7 +394,7 @@
         <span style="font-size:20px;">🌐</span>
         Neon AI Core
     </h3>
-    <p style="font-size:0.8rem; margin:0; color:#FFFFFF;">Type naturally. Try: <i>"Schedule a bio exam for next Friday at 10am"</i></p>
+    <p style="font-size:0.8rem; margin:0; color:#94a3b8;">Type naturally. Try: <i>"Schedule a bio exam for next Friday at 10am"</i></p>
     <input type="text" id="aiPrompt" class="ai-input" placeholder="What do you need to schedule?" onkeypress="handleAIKey(event)">
     <button class="btn-add" onclick="processAIPrompt()" style="width:100%;">Generate Schedule</button>
     <div id="aiResponse" class="ai-response"></div>
@@ -419,52 +442,157 @@
     // On iOS this requires the app to be saved to Home Screen first.
 
     const SW_SCRIPT = `
+const CACHE_NAME = 'neon-calendar-v1';
+
+// Cache everything inline (the page caches itself via the SW)
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
+    event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => {
+            // We can't cache the page URL from blob SW, but we intercept fetches
+            return Promise.resolve();
+        })
+    );
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        Promise.all([
+            clients.claim(),
+            caches.keys().then(keys =>
+                Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+            )
+        ])
+    );
+});
+
+// Cache-first strategy for all requests
+self.addEventListener('fetch', (event) => {
+    event.respondWith(
+        caches.match(event.request).then(cached => {
+            if (cached) return cached;
+            return fetch(event.request).then(response => {
+                if (response && response.status === 200 && response.type !== 'opaque') {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                }
+                return response;
+            }).catch(() => cached);
+        })
+    );
+});
+
+// Scheduled notification store (survives SW sleep via repeated checks)
+const scheduledTasks = new Map();
+
 self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SCHEDULE_NOTIF') {
+    if (!event.data) return;
+
+    if (event.data.type === 'SCHEDULE_NOTIF') {
         const { id, title, body, fireAt } = event.data;
         const delay = fireAt - Date.now();
-        if (delay > 0) {
-            setTimeout(() => {
-                self.registration.showNotification(title, {
-                    body: body,
-                    icon: '/favicon.ico',
-                    tag: 'neon-task-' + id,
-                    requireInteraction: true,
-                    badge: '/favicon.ico'
-                });
-            }, delay);
+        if (delay <= 0) return;
+        // Clear any existing timer for this task
+        if (scheduledTasks.has(id)) clearTimeout(scheduledTasks.get(id));
+        const timer = setTimeout(() => {
+            self.registration.showNotification(title, {
+                body: body,
+                icon: '',
+                tag: 'neon-task-' + id,
+                requireInteraction: true,
+                vibrate: [200, 100, 200],
+                actions: [{ action: 'open', title: 'Open Calendar' }]
+            });
+            scheduledTasks.delete(id);
+        }, delay);
+        scheduledTasks.set(id, timer);
+    }
+
+    if (event.data.type === 'CANCEL_NOTIF') {
+        const { id } = event.data;
+        if (scheduledTasks.has(id)) {
+            clearTimeout(scheduledTasks.get(id));
+            scheduledTasks.delete(id);
         }
     }
-    if (event.data && event.data.type === 'CANCEL_NOTIF') {
-        // No direct cancel API; tag deduplication handles it
+
+    if (event.data.type === 'CACHE_PAGE') {
+        // Cache the calendar HTML so it works offline
+        const { url, html } = event.data;
+        caches.open(CACHE_NAME).then(cache => {
+            const response = new Response(html, {
+                headers: { 'Content-Type': 'text/html; charset=utf-8' }
+            });
+            cache.put(url, response);
+        });
     }
 });
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    event.waitUntil(clients.openWindow(self.location.origin));
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+            for (const client of clientList) {
+                if ('focus' in client) return client.focus();
+            }
+            return clients.openWindow(self.location.origin);
+        })
+    );
 });
-
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(clients.claim()));
 `;
-
     let swRegistration = null;
 
     async function registerServiceWorker() {
         if (!('serviceWorker' in navigator)) return null;
         try {
-            // Inline SW as blob URL
             const blob = new Blob([SW_SCRIPT], { type: 'application/javascript' });
             const swUrl = URL.createObjectURL(blob);
             const reg = await navigator.serviceWorker.register(swUrl, { scope: '/' });
             swRegistration = reg;
+
+            // Cache this page so it works fully offline
+            await navigator.serviceWorker.ready;
+            if (reg.active) {
+                reg.active.postMessage({
+                    type: 'CACHE_PAGE',
+                    url: location.href,
+                    html: document.documentElement.outerHTML
+                });
+            }
             return reg;
         } catch(e) {
             console.warn('SW registration failed:', e);
             return null;
         }
     }
+
+    // Auto-register SW on load for offline support (even before push is enabled)
+    window.addEventListener('load', async () => {
+        if ('serviceWorker' in navigator) {
+            const blob = new Blob([SW_SCRIPT], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            try {
+                const reg = await navigator.serviceWorker.register(swUrl, { scope: '/' });
+                swRegistration = reg;
+                await navigator.serviceWorker.ready;
+                // Cache page for offline
+                const active = reg.active || (await navigator.serviceWorker.ready).active;
+                if (active) {
+                    active.postMessage({
+                        type: 'CACHE_PAGE',
+                        url: location.href,
+                        html: document.documentElement.outerHTML
+                    });
+                }
+                // Re-schedule any pending push tasks if push was already enabled
+                if (localStorage.getItem('pushEnabled') === 'true' && Notification.permission === 'granted') {
+                    schedulePushNotifications();
+                }
+            } catch(e) {
+                console.warn('Auto SW registration failed:', e);
+            }
+        }
+    });
 
     async function checkPushSupport() {
         const statusEl = document.getElementById('pushStatus');
@@ -724,7 +852,14 @@ self.addEventListener('activate', (event) => event.waitUntil(clients.claim()));
         if (currentView === 'day') baseDate.setDate(baseDate.getDate() + dir);
         updateUI();
     }
-    function goToday() { baseDate = new Date(); updateUI(); }
+    function goToday() {
+        const t = new Date();
+        baseDate = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+        currentView = 'month';
+        document.querySelectorAll('.view-tabs button').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-month').classList.add('active');
+        updateUI();
+    }
 
     function getTagClass(t, isOverdue) {
         let base = 'task-tag';
@@ -923,6 +1058,15 @@ self.addEventListener('activate', (event) => event.waitUntil(clients.claim()));
         // Remove overlay after animation
         overlay.addEventListener('animationend', () => overlay.remove());
     }
+
+
+    // ── OFFLINE DETECTION ──
+    function updateOnlineStatus() {
+        document.body.classList.toggle('offline', !navigator.onLine);
+    }
+    window.addEventListener('online',  updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
 
     updateUI();
 </script>
